@@ -673,10 +673,21 @@ function renderPromptList() {
 }
 
 function renderFocusQuestions(entry) {
+  const focusAnswers = focusAnswersFor(entry);
   return `
-    <ul class="question-list">
-      ${entry.prompts.map((prompt) => `<li>${escapeHtml(prompt)}</li>`).join("")}
-    </ul>
+    <div class="structured-section">
+      <div class="section-head">
+        <strong>Fokusfragen schriftlich beantworten</strong>
+        <span class="status-badge" data-doc-count="focus">${escapeHtml(`${focusAnswers.filter((value) => trimmed(value)).length}/${entry.prompts.length}`)}</span>
+      </div>
+      ${entry.prompts.map((prompt, index) => `
+        <label>
+          ${escapeHtml(`Fokusfrage ${index + 1}`)}
+          <span class="field-prompt">${escapeHtml(prompt)}</span>
+          <textarea data-note-array="focusAnswers" data-index="${index}" placeholder="Formuliere hier eine knappe, textnahe Antwort.">${escapeHtml(focusAnswers[index])}</textarea>
+        </label>
+      `).join("")}
+    </div>
   `;
 }
 
@@ -684,8 +695,6 @@ function renderNotebook(entry) {
   const note = noteForEntry(entry.id);
   const feedback = feedbackFor(note, currentModule(), entry);
   const theory = currentTheory();
-  const focusAnswers = focusAnswersFor(entry);
-  const theoryResponses = theoryResponseFor(entry, theory);
   const documentation = documentationStatusForEntry(entry, theory);
 
   return `
@@ -727,48 +736,6 @@ function renderNotebook(entry) {
           Revision / nächster Schritt
           <textarea name="revision" placeholder="Was würdest du nach Feedback oder erneuter Lektüre noch schärfen?">${escapeHtml(note.revision)}</textarea>
         </label>
-
-        <section class="structured-section">
-          <div class="section-head">
-            <strong>Fokusfragen schriftlich beantworten</strong>
-            <span class="status-badge" data-doc-count="focus">${escapeHtml(`${focusAnswers.filter((value) => trimmed(value)).length}/${entry.prompts.length}`)}</span>
-          </div>
-          ${entry.prompts.map((prompt, index) => `
-            <label>
-              ${escapeHtml(`Fokusfrage ${index + 1}`)}
-              <span class="field-prompt">${escapeHtml(prompt)}</span>
-              <textarea data-note-array="focusAnswers" data-index="${index}" placeholder="Formuliere hier eine knappe, textnahe Antwort.">${escapeHtml(focusAnswers[index])}</textarea>
-            </label>
-          `).join("")}
-        </section>
-
-        <section class="structured-section">
-          <div class="section-head">
-            <strong>${escapeHtml(`Leitfragen zu ${theory.shortTitle}`)}</strong>
-            <span class="status-badge" data-doc-count="guiding">${escapeHtml(`${theoryResponses.guidingAnswers.filter((value) => trimmed(value)).length}/${theory.questions.length}`)}</span>
-          </div>
-          ${theory.questions.map((question, index) => `
-            <label>
-              ${escapeHtml(`Leitfrage ${index + 1}`)}
-              <span class="field-prompt">${escapeHtml(question)}</span>
-              <textarea data-note-theory-section="guidingAnswers" data-index="${index}" placeholder="Halte deine Antwort zur Leitfrage schriftlich fest.">${escapeHtml(theoryResponses.guidingAnswers[index])}</textarea>
-            </label>
-          `).join("")}
-        </section>
-
-        <section class="structured-section">
-          <div class="section-head">
-            <strong>Transfer zur Passage schriftlich festhalten</strong>
-            <span class="status-badge" data-doc-count="transfer">${escapeHtml(`${theoryResponses.transferAnswers.filter((value) => trimmed(value)).length}/${transferPromptsFor(entry, theory).length}`)}</span>
-          </div>
-          ${transferPromptsFor(entry, theory).map((prompt, index) => `
-            <label>
-              ${escapeHtml(`Transfer ${index + 1}`)}
-              <span class="field-prompt">${escapeHtml(prompt)}</span>
-              <textarea data-note-theory-section="transferAnswers" data-index="${index}" placeholder="Übertrage die Theorie hier ausdrücklich auf die aktuelle Passage.">${escapeHtml(theoryResponses.transferAnswers[index])}</textarea>
-            </label>
-          `).join("")}
-        </section>
       </form>
 
       ${mode === "seb" ? "" : `
@@ -936,6 +903,7 @@ function renderPdfPanel(entry, module) {
 function renderTheoryPanel(module, entry) {
   const theory = currentTheory();
   const transferPrompts = transferPromptsFor(entry, theory);
+  const theoryResponses = theoryResponseFor(entry, theory);
 
   return `
     <article class="panel theory-panel">
@@ -955,18 +923,32 @@ function renderTheoryPanel(module, entry) {
       </div>
 
       <div class="theory-grid">
-        <div class="theory-card">
-          <strong>Leitfragen</strong>
-          <ul class="question-list">
-            ${theory.questions.map((question) => `<li>${escapeHtml(question)}</li>`).join("")}
-          </ul>
-        </div>
-        <div class="theory-card">
-          <strong>Transfer zur Passage</strong>
-          <ul class="question-list">
-            ${transferPrompts.map((question) => `<li>${escapeHtml(question)}</li>`).join("")}
-          </ul>
-        </div>
+        <section class="structured-section theory-card">
+          <div class="section-head">
+            <strong>${escapeHtml(`Leitfragen zu ${theory.shortTitle}`)}</strong>
+            <span class="status-badge" data-doc-count="guiding">${escapeHtml(`${theoryResponses.guidingAnswers.filter((value) => trimmed(value)).length}/${theory.questions.length}`)}</span>
+          </div>
+          ${theory.questions.map((question, index) => `
+            <label>
+              ${escapeHtml(`Leitfrage ${index + 1}`)}
+              <span class="field-prompt">${escapeHtml(question)}</span>
+              <textarea data-note-theory-section="guidingAnswers" data-index="${index}" placeholder="Halte deine Antwort zur Leitfrage schriftlich fest.">${escapeHtml(theoryResponses.guidingAnswers[index])}</textarea>
+            </label>
+          `).join("")}
+        </section>
+        <section class="structured-section theory-card">
+          <div class="section-head">
+            <strong>Transfer zur Passage schriftlich festhalten</strong>
+            <span class="status-badge" data-doc-count="transfer">${escapeHtml(`${theoryResponses.transferAnswers.filter((value) => trimmed(value)).length}/${transferPrompts.length}`)}</span>
+          </div>
+          ${transferPrompts.map((question, index) => `
+            <label>
+              ${escapeHtml(`Transfer ${index + 1}`)}
+              <span class="field-prompt">${escapeHtml(question)}</span>
+              <textarea data-note-theory-section="transferAnswers" data-index="${index}" placeholder="Übertrage die Theorie hier ausdrücklich auf die aktuelle Passage.">${escapeHtml(theoryResponses.transferAnswers[index])}</textarea>
+            </label>
+          `).join("")}
+        </section>
       </div>
 
       <div class="writing-frame-box">
@@ -1650,15 +1632,25 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.dataset.noteArray) {
+    updateNoteArrayField(event.target.dataset.noteArray, Number(event.target.dataset.index || 0), event.target.value);
+    queueSave();
+    queueSebFeedback();
+    updateLiveDocumentation();
+    return;
+  }
+
+  if (event.target.dataset.noteTheorySection) {
+    updateTheoryAnswer(event.target.dataset.noteTheorySection, Number(event.target.dataset.index || 0), event.target.value);
+    queueSave();
+    queueSebFeedback();
+    updateLiveDocumentation();
+    return;
+  }
+
   const noteForm = event.target.closest("#note-form");
   if (noteForm) {
-    if (event.target.dataset.noteArray) {
-      updateNoteArrayField(event.target.dataset.noteArray, Number(event.target.dataset.index || 0), event.target.value);
-    } else if (event.target.dataset.noteTheorySection) {
-      updateTheoryAnswer(event.target.dataset.noteTheorySection, Number(event.target.dataset.index || 0), event.target.value);
-    } else {
-      updateNoteField(event.target.name, event.target.value);
-    }
+    updateNoteField(event.target.name, event.target.value);
     queueSave();
     queueSebFeedback();
     updateLiveDocumentation();
