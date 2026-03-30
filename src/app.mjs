@@ -307,159 +307,29 @@ function pageRangeForLesson(lesson) {
   return first === last ? `S. ${first}` : `S. ${first}-${last}`;
 }
 
-function renderTeacherEntryPage({ lessonId, entryId }) {
-  const lessons = getLessonSetsWithCounts();
-  const currentLesson = getLessonSetById(lessonId);
-  const lessonEntries = getEntriesForLesson(currentLesson.id);
-  const currentEntry = lessonEntries.find((entry) => entry.id === entryId) || lessonEntries[0];
-  const currentMeta = entryIndex.get(currentEntry?.id || "") || {};
-  const currentModule = currentMeta.module || modulesById.get(currentLesson.moduleIds[0]) || readerModules[0];
-  const lessonTheories = [
-    ...new Set(
-      lessonEntries.flatMap((entry) => entry.relatedTheoryIds || [])
-        .concat(currentLesson.moduleIds.flatMap((moduleId) => modulesById.get(moduleId)?.relatedTheoryIds || []))
-    )
-  ]
-    .map((theoryId) => theoryResources.find((resource) => resource.id === theoryId))
-    .filter(Boolean);
-  const pdfUrl = `${pdfSource}#page=${currentEntry?.pageNumber || 1}&zoom=page-width`;
-
-  return renderShellPage({
-    title: "Lehrereingang · Bahnwärter Thiel",
-    body: `
-      <main class="page">
-        <section class="panel">
-          <div class="eyebrow">Lehrereingang</div>
-          <h1>Alle Thiel-Aufgaben direkt im Blick</h1>
-          <p>Dieser Zugang zeigt das gesamte Arbeitsmaterial ohne Klassenfreischaltung: Lektionspfad, Passagen, Fokusfragen, Theoriebezüge und das eingebettete PDF an der passenden Stelle.</p>
-          <div class="row">
-            <a class="button secondary" href="/teacher">Zum Dashboard</a>
-            <a class="button secondary" href="/open">Offene Version</a>
-            <a class="button secondary" href="/auth/teacher/logout">Abmelden</a>
-          </div>
-        </section>
-
-        <section class="teacher-entry-layout">
-          <aside class="teacher-entry-sidebar">
-            <section class="panel">
-              <div class="eyebrow">Lektionsnavigation</div>
-              ${lessons.map((lesson) => `
-                <a class="lesson-nav-card ${lesson.id === currentLesson.id ? "is-active" : ""}" href="/teacher-entry?lesson=${lesson.id}">
-                  <strong>${lesson.title}</strong>
-                  <span>${lesson.summary}</span>
-                  <span>${pageRangeForLesson(lesson)} · ${lesson.entryCount} Passagen</span>
-                </a>
-              `).join("")}
-            </section>
-
-            <section class="panel teacher-entry-passage-list">
-              <div class="eyebrow">Passagen der Lektion</div>
-              ${lessonEntries.map((entry) => `
-                <a class="passage-nav-card ${entry.id === currentEntry.id ? "is-active" : ""}" href="/teacher-entry?lesson=${currentLesson.id}&entry=${entry.id}">
-                  <strong>${entry.title}</strong>
-                  <span>${entry.pageHint}</span>
-                  <span>${entry.passageLabel}</span>
-                  <span>${entry.prompts[0] || ""}</span>
-                </a>
-              `).join("")}
-            </section>
-          </aside>
-
-          <section class="teacher-entry-viewer">
-            <section class="panel">
-              <div class="eyebrow">${currentLesson.title}</div>
-              <h2>${currentEntry.title}</h2>
-              <p>${currentEntry.context}</p>
-              <div class="meta-grid">
-                <div class="meta-card">
-                  <strong>Modul</strong>
-                  <p>${currentModule.title}</p>
-                </div>
-                <div class="meta-card">
-                  <strong>Seitenkorridor</strong>
-                  <p>${pageRangeForLesson(currentLesson)}</p>
-                </div>
-                <div class="meta-card">
-                  <strong>Aktuelle Passage</strong>
-                  <p>${currentEntry.pageHint} · ${currentEntry.passageLabel}</p>
-                </div>
-                <div class="meta-card">
-                  <strong>Review-Fokus</strong>
-                  <p>${currentLesson.reviewFocus}</p>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="eyebrow">Arbeitsauftrag</div>
-              <div class="prompt-panel">
-                <strong>Modulauftrag</strong>
-                <p>${currentModule.task}</p>
-              </div>
-              <div class="prompt-panel">
-                <strong>SEB-Arbeitsauftrag der Lektion</strong>
-                <p>${currentLesson.sebPrompt}</p>
-              </div>
-              <div class="prompt-panel">
-                <strong>Fokusfragen</strong>
-                <ul class="small-list">
-                  ${currentEntry.prompts.map((prompt) => `<li>${prompt}</li>`).join("")}
-                </ul>
-              </div>
-              <div class="prompt-panel">
-                <strong>Satzstarter</strong>
-                <p>${currentEntry.writingFrame}</p>
-              </div>
-            </section>
-
-            ${lessonTheories.length ? `
-              <section class="panel resource-panel">
-                <div>
-                  <div class="eyebrow">Theorie-Ressourcen der Lektion</div>
-                  <h2>Novelle, Naturalismus und Erzählperspektive im Zugriff</h2>
-                </div>
-                <div class="teacher-entry-resource-list">
-                  ${lessonTheories.map((resource) => `
-                    <article class="resource-nav-card">
-                      <strong>${resource.title}</strong>
-                      <span>${resource.sourceTitle}</span>
-                      <span>${resource.summary}</span>
-                      <div>
-                        <strong>Leitfragen</strong>
-                        <ul class="small-list">
-                          ${resource.questions.map((question) => `<li>${question}</li>`).join("")}
-                        </ul>
-                      </div>
-                      <div>
-                        <strong>Transfer zur Passage</strong>
-                        <ul class="small-list">
-                          ${resource.transferPrompts.map((prompt) => `<li>${prompt}</li>`).join("")}
-                        </ul>
-                      </div>
-                      <div class="row">
-                        <a class="button secondary" href="${resource.openUrl}" target="_blank" rel="noreferrer">Video extern öffnen</a>
-                      </div>
-                    </article>
-                  `).join("")}
-                </div>
-              </section>
-            ` : ""}
-
-            <section class="panel">
-              <div class="eyebrow">PDF am relevanten Ort</div>
-              <h2>${currentEntry.passageLabel}</h2>
-              <div class="row">
-                <a class="button secondary" href="${pdfUrl}" target="_blank" rel="noreferrer">PDF separat öffnen</a>
-              </div>
-              <div class="iframe-shell">
-                <iframe src="${pdfUrl}" title="Bahnwärter Thiel PDF"></iframe>
-              </div>
-            </section>
-          </section>
-        </section>
-      </main>
-    `
-  });
+function renderTeacherEntryPage(lessonId) {
+  return `
+    <!doctype html>
+    <html lang="de">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Lehrereingang · Bahnwärter Thiel</title>
+        <link rel="stylesheet" href="/reader/styles.css">
+      </head>
+      <body>
+        <script>
+          window.THIEL_READER_MODE = "open";
+          window.THIEL_READER_MODE_LABEL = "Lehrervorschau";
+          window.THIEL_READER_CONFIG = ${JSON.stringify({
+            teacherPreview: true,
+            initialLessonId: lessonId || null
+          })};
+        </script>
+        <script type="module" src="/reader/app.js"></script>
+      </body>
+    </html>
+  `;
 }
 
 function renderStudentAccessPage({ mode, lessonId, errorText = "" }) {
@@ -668,10 +538,7 @@ export function createApp() {
       return;
     }
 
-    response.send(renderTeacherEntryPage({
-      lessonId: request.query.lesson,
-      entryId: request.query.entry
-    }));
+    response.send(renderTeacherEntryPage(request.query.lesson));
   });
 
   app.post("/auth/open", async (request, response) => {

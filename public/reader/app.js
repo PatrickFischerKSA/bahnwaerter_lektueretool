@@ -4,7 +4,9 @@ import { buildParcoursMarkdown } from "./export.js";
 const mode = window.THIEL_READER_MODE || "open";
 const modeLabel = window.THIEL_READER_MODE_LABEL || "Offene Version";
 const config = window.THIEL_READER_CONFIG || {};
+const isTeacherPreview = Boolean(config.teacherPreview);
 const app = document.body;
+const previewStorageKey = "thiel_teacher_preview_state";
 
 const reviewLevels = [
   { value: "stark", label: "stark" },
@@ -40,6 +42,114 @@ let saveTimer = null;
 let feedbackTimer = null;
 let sebFeedbackRequestId = 0;
 
+function countCompletedEntries(notes = {}) {
+  return readerModules.flatMap((module) => module.entries).filter((entry) => {
+    const note = notes[entry.id] || {};
+    return Boolean(
+      String(note.observation || "").trim()
+      || String(note.interpretation || "").trim()
+      || String(note.theory || "").trim()
+    );
+  }).length;
+}
+
+function buildPreviewProgress(notes = {}) {
+  const allEntries = readerModules.flatMap((module) => module.entries);
+  const completedEntries = countCompletedEntries(notes);
+  const lessonProgress = lessonSets.map((lesson) => {
+    const entries = lesson.moduleIds.flatMap((moduleId) => readerModules.find((module) => module.id === moduleId)?.entries || []);
+    const done = entries.filter((entry) => {
+      const note = notes[entry.id] || {};
+      return Boolean(
+        String(note.observation || "").trim()
+        || String(note.interpretation || "").trim()
+        || String(note.theory || "").trim()
+      );
+    }).length;
+
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      completedEntries: done,
+      totalEntries: entries.length,
+      percent: entries.length ? Math.round((done / entries.length) * 100) : 0
+    };
+  });
+
+  return {
+    completedEntries,
+    totalEntries: allEntries.length,
+    percent: allEntries.length ? Math.round((completedEntries / allEntries.length) * 100) : 0,
+    evidenceEntries: allEntries.filter((entry) => String(notes[entry.id]?.evidence || "").trim()).length,
+    theoryEntries: allEntries.filter((entry) => String(notes[entry.id]?.theory || "").trim()).length,
+    completedLessonIds: lessonProgress.filter((lesson) => lesson.completedEntries === lesson.totalEntries).map((lesson) => lesson.id),
+    lessonProgress
+  };
+}
+
+function readPreviewState() {
+  if (!isTeacherPreview) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(previewStorageKey);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePreviewState(payload) {
+  if (!isTeacherPreview) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(previewStorageKey, JSON.stringify(payload));
+  } catch {
+    // ignore storage issues in preview mode
+  }
+}
+
+function buildPreviewBootstrap() {
+  const stored = readPreviewState() || {};
+  const notes = stored.notes || {};
+  const progress = buildPreviewProgress(notes);
+
+  return {
+    classroom: {
+      id: "teacher-preview",
+      name: "Lehrervorschau",
+      lessonIds: lessonSets.map((lesson) => lesson.id),
+      activeSebLessonId: config.initialLessonId || lessonSets[0].id
+    },
+    student: {
+      id: "teacher-preview",
+      displayName: "Lehrervorschau"
+    },
+    progress,
+    peerReview: {
+      enabled: false,
+      assignments: [],
+      stats: {
+        assignedCount: 0,
+        completedAssignedCount: 0,
+        receivedCount: 0,
+        receivedCompletedCount: 0
+      }
+    },
+    work: {
+      notes,
+      selectedLessonId: stored.lessonId || config.initialLessonId || lessonSets[0].id,
+      moduleId: stored.moduleId || readerModules[0].id,
+      entryId: stored.entryId || readerModules[0].entries[0].id,
+      theoryId: stored.theoryId || theoryResources[0].id,
+      updatedAt: stored.updatedAt || ""
+    }
+  };
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -49,6 +159,10 @@ function escapeHtml(value) {
 }
 
 async function fetchBootstrap() {
+  if (isTeacherPreview) {
+    return buildPreviewBootstrap();
+  }
+
   const response = await fetch("/reader-api/bootstrap", { credentials: "same-origin" });
   if (!response.ok) {
     throw new Error("Die Reader-Sitzung konnte nicht geladen werden.");
@@ -81,6 +195,7 @@ function applyBootstrap(payload) {
   state.peerReview = payload.peerReview;
   state.notes = payload.work.notes || {};
   state.lessonId = config.forcedLessonId
+    || config.initialLessonId
     || (mode === "seb" ? payload.classroom.activeSebLessonId : payload.work.selectedLessonId)
     || state.lessonId;
   state.moduleId = payload.work.moduleId || state.moduleId;
@@ -168,6 +283,23 @@ async function saveProgress() {
   clearTimeout(saveTimer);
   state.saveStatus = "saving";
   render();
+
+  if (isTeacherPreview) {
+    const updatedAt = new Date().toISOString();
+    writePreviewState({
+      notes: state.notes,
+      lessonId: state.lessonId,
+      moduleId: state.moduleId,
+      entryId: state.entryId,
+      theoryId: state.theoryId,
+      updatedAt
+    });
+    state.progress = buildPreviewProgress(state.notes);
+    state.lastSavedAt = updatedAt;
+    state.saveStatus = "saved";
+    render();
+    return;
+  }
 
   try {
     const response = await fetch("/reader-api/progress", {
@@ -1029,7 +1161,9 @@ function renderTopStatus() {
   const saveLabel = {
     idle: "bereit",
     saving: "speichert ...",
-    saved: state.lastSavedAt ? `gespeichert · ${new Date(state.lastSavedAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}` : "gespeichert",
+    saved: state.lastSavedAt
+      ? `${isTeacherPreview ? "lokal gespeichert" : "gespeichert"} · ${new Date(state.lastSavedAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}`
+      : (isTeacherPreview ? "lokal gespeichert" : "gespeichert"),
     error: "Speicherfehler"
   }[state.saveStatus] || "bereit";
 
@@ -1121,7 +1255,9 @@ function render() {
           <div class="eyebrow">Bahnwärter Thiel · ${escapeHtml(modeLabel)}</div>
           <h1>Engmaschiges PDF-Lesetool für die ganze Novelle</h1>
           <p>
-            ${mode === "seb"
+            ${isTeacherPreview
+              ? "Diese Lehrervorschau zeigt denselben streng geführten Reader wie die Lernenden: mit Textfeldern, Lückenanzeige, Export und direkt sichtbarem Arbeitsfeedback, aber ohne Klassen-Code und ohne Schüler-Session."
+              : mode === "seb"
               ? "Diese SEB-Fassung arbeitet mit einem klaren Lektionen-Set. Die Textpassagen und Theorie-Linsen sind auf die aktuelle Prüfungseinheit fokussiert."
               : "Der Text ist vollständig integriert. Links steuerst du den Textpfad und die Theorie-Linsen, in der Mitte liest du die Passage im PDF, rechts verbindest du Textbeobachtung, Theoriebezug, Überarbeitung und Peer Review."}
           </p>
@@ -1129,7 +1265,10 @@ function render() {
         <div class="hero-actions">
           <span class="status-badge">${escapeHtml(modeLabel)}</span>
           <span class="status-badge">${escapeHtml(lesson.reviewFocus)}</span>
-          ${mode === "open" ? '<a class="button secondary" href="/auth/logout">Abmelden</a>' : ""}
+          ${isTeacherPreview
+            ? '<a class="button secondary" href="/teacher">Zum Dashboard</a><a class="button secondary" href="/auth/teacher/logout">Abmelden</a>'
+            : (mode === "open" ? '<a class="button secondary" href="/auth/logout">Abmelden</a>' : "")
+          }
         </div>
       </section>
 
@@ -1560,7 +1699,7 @@ async function init() {
     state.error = "";
     ensureSelection();
     render();
-    if (mode === "seb") {
+    if (mode === "seb" && !isTeacherPreview) {
       await requestSebFeedback({ showLoading: true, force: true });
     }
   } catch (error) {
