@@ -680,13 +680,15 @@ function renderFocusQuestions(entry) {
         <strong>Fokusfragen schriftlich beantworten</strong>
         <span class="status-badge" data-doc-count="focus">${escapeHtml(`${focusAnswers.filter((value) => trimmed(value)).length}/${entry.prompts.length}`)}</span>
       </div>
-      ${entry.prompts.map((prompt, index) => `
-        <label>
+      <div class="question-answer-stack">
+        ${entry.prompts.map((prompt, index) => `
+        <label class="question-answer-block">
           ${escapeHtml(`Fokusfrage ${index + 1}`)}
           <span class="field-prompt">${escapeHtml(prompt)}</span>
-          <textarea data-note-array="focusAnswers" data-index="${index}" placeholder="Formuliere hier eine knappe, textnahe Antwort.">${escapeHtml(focusAnswers[index])}</textarea>
+          <textarea class="answer-field answer-field-lg" data-note-array="focusAnswers" data-index="${index}" placeholder="Formuliere hier eine knappe, textnahe Antwort.">${escapeHtml(focusAnswers[index])}</textarea>
         </label>
       `).join("")}
+      </div>
     </div>
   `;
 }
@@ -922,32 +924,36 @@ function renderTheoryPanel(module, entry) {
         </div>
       </div>
 
-      <div class="theory-grid">
+      <div class="theory-grid theory-grid-answer">
         <section class="structured-section theory-card">
           <div class="section-head">
             <strong>${escapeHtml(`Leitfragen zu ${theory.shortTitle}`)}</strong>
             <span class="status-badge" data-doc-count="guiding">${escapeHtml(`${theoryResponses.guidingAnswers.filter((value) => trimmed(value)).length}/${theory.questions.length}`)}</span>
           </div>
-          ${theory.questions.map((question, index) => `
-            <label>
+          <div class="question-answer-stack">
+            ${theory.questions.map((question, index) => `
+            <label class="question-answer-block">
               ${escapeHtml(`Leitfrage ${index + 1}`)}
               <span class="field-prompt">${escapeHtml(question)}</span>
-              <textarea data-note-theory-section="guidingAnswers" data-index="${index}" placeholder="Halte deine Antwort zur Leitfrage schriftlich fest.">${escapeHtml(theoryResponses.guidingAnswers[index])}</textarea>
+              <textarea class="answer-field answer-field-lg" data-note-theory-section="guidingAnswers" data-index="${index}" placeholder="Halte deine Antwort zur Leitfrage schriftlich fest.">${escapeHtml(theoryResponses.guidingAnswers[index])}</textarea>
             </label>
           `).join("")}
+          </div>
         </section>
         <section class="structured-section theory-card">
           <div class="section-head">
             <strong>Transfer zur Passage schriftlich festhalten</strong>
             <span class="status-badge" data-doc-count="transfer">${escapeHtml(`${theoryResponses.transferAnswers.filter((value) => trimmed(value)).length}/${transferPrompts.length}`)}</span>
           </div>
-          ${transferPrompts.map((question, index) => `
-            <label>
+          <div class="question-answer-stack">
+            ${transferPrompts.map((question, index) => `
+            <label class="question-answer-block">
               ${escapeHtml(`Transfer ${index + 1}`)}
               <span class="field-prompt">${escapeHtml(question)}</span>
-              <textarea data-note-theory-section="transferAnswers" data-index="${index}" placeholder="Übertrage die Theorie hier ausdrücklich auf die aktuelle Passage.">${escapeHtml(theoryResponses.transferAnswers[index])}</textarea>
+              <textarea class="answer-field answer-field-lg" data-note-theory-section="transferAnswers" data-index="${index}" placeholder="Übertrage die Theorie hier ausdrücklich auf die aktuelle Passage.">${escapeHtml(theoryResponses.transferAnswers[index])}</textarea>
             </label>
           `).join("")}
+          </div>
         </section>
       </div>
 

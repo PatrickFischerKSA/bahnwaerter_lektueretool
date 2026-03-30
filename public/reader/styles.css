@@ -332,6 +332,10 @@ button {
   gap: 18px;
 }
 
+.theory-grid-answer {
+  grid-template-columns: 1fr;
+}
+
 .review-layout,
 .review-meta-grid,
 .seb-profile-grid,
@@ -472,6 +476,21 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.question-answer-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.question-answer-block {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(49, 67, 53, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -484,6 +503,10 @@ textarea {
   font-weight: 500;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.answer-field.answer-field-lg {
+  min-height: 180px;
 }
 
 .feedback-box ul {
