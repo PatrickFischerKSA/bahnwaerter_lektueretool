@@ -890,6 +890,26 @@ export const lessonSets = [
     reviewFocus: "Begründe aus dem Wortlaut, warum der Schluss Schock und Konsequenz zugleich ist.",
     sebPrompt:
       "Formuliere eine belastbare Gesamtdeutung des Schlusses und stütze sie mit mindestens zwei Beobachtungen am Wortlaut."
+  },
+  {
+    id: "lesson-novellentheorie",
+    title: "Lektion 6 · Novellentheorie als Leseschlüssel",
+    summary:
+      "Die Einheit bündelt zentrale Passagen unter der Frage, wie Bahnwärter Thiel als Novelle mit Verdichtung, Motivführung und unerhörter Begebenheit gebaut ist.",
+    moduleIds: ["auftakt", "kapelle", "ausflug", "schluss"],
+    reviewFocus: "Arbeite mit Wendepunkt, Verdichtung, Motivik und folgenreicher Ausnahmebegebenheit.",
+    sebPrompt:
+      "Prüfe an mehreren Passagen, wie der Text den Konflikt verdichtet, Motive wiederkehren lässt und auf die unerhörte Begebenheit im Schluss zuläuft. Nutze gezielt die Theorie-Linse Novelle."
+  },
+  {
+    id: "lesson-naturalismus-perspektive",
+    title: "Lektion 7 · Naturalismus und Erzählperspektive",
+    summary:
+      "Diese Lektion verbindet Milieuanalyse und Perspektivarbeit: Wie machen Arbeit, Körper, soziale Härte und Wahrnehmungsnähe Thiels Krise lesbar?",
+    moduleIds: ["auftakt", "lene", "milieu", "spaltung"],
+    reviewFocus: "Verbinde Milieu, Körper, soziale Determinierung und Wahrnehmungslenkung sauber mit dem Wortlaut.",
+    sebPrompt:
+      "Untersuche an ausgewählten Passagen, wie Naturalismus und Erzählperspektive zusammenwirken: Zeige erst die äußeren Bedingungen, dann die gelenkte Wahrnehmung und sichere beides mit präzisen Textsignalen."
   }
 ];
 

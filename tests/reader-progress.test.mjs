@@ -55,6 +55,13 @@ test("calculateReaderProgress counts completed entries and lesson coverage", () 
   assert.equal(progress.lessonProgress.find((lesson) => lesson.id === "lesson-auftakt").completedEntries, 2);
 });
 
+test("lesson metadata includes the added theory units", () => {
+  const lessons = getLessonSetsWithCounts();
+
+  assert.ok(lessons.some((lesson) => lesson.id === "lesson-novellentheorie"));
+  assert.ok(lessons.some((lesson) => lesson.id === "lesson-naturalismus-perspektive"));
+});
+
 test("createOrResumeStudent reuses class code and keeps one student per class/name", () => {
   const store = makeReaderStore();
   const first = createOrResumeStudent(store, {

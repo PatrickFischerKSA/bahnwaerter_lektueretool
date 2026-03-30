@@ -24,9 +24,11 @@ test("createClassroom generates a code and all current lesson ids", () => {
   assert.equal(store.classes.length, 1);
   assert.equal(classroom.name, "Klasse 9B");
   assert.match(classroom.code, /^THIEL-[A-Z0-9]{6}$/);
-  assert.equal(classroom.lessonIds.length, 5);
+  assert.equal(classroom.lessonIds.length, 7);
   assert.ok(classroom.lessonIds.includes("lesson-auftakt"));
   assert.ok(classroom.lessonIds.includes("lesson-schluss"));
+  assert.ok(classroom.lessonIds.includes("lesson-novellentheorie"));
+  assert.ok(classroom.lessonIds.includes("lesson-naturalismus-perspektive"));
 });
 
 test("regenerateClassroomCode replaces the existing class code", () => {
