@@ -1,4 +1,5 @@
 const app = document.body;
+const config = window.THIEL_TEACHER_CONFIG || {};
 
 const state = {
   loading: true,
@@ -127,46 +128,69 @@ function renderLessonLinks() {
 
 function renderTeacherGuide(classroom) {
   const code = classroom?.code || "noch kein Code";
+  const openPassword = config.openPassword || "im Server gesetzt";
   return `
     <article class="panel">
       <div class="panel-head">
         <div>
-          <div class="eyebrow">Anleitung</div>
-          <h2>Codes erstellen und Schüler*innen anmelden</h2>
+          <div class="eyebrow">Betriebsprotokoll</div>
+          <h2>Passwort, Klassen-Code und SEB sauber starten</h2>
+        </div>
+      </div>
+      <div class="protocol-banner">
+        <div class="protocol-chip">
+          <span>Offene Version</span>
+          <strong>${escapeHtml(config.openUrl || "/open")}</strong>
+        </div>
+        <div class="protocol-chip">
+          <span>SEB-Version</span>
+          <strong>${escapeHtml(config.sebUrl || "/seb")}</strong>
+        </div>
+        <div class="protocol-chip">
+          <span>Aktuelles Unterrichtspasswort</span>
+          <strong>${escapeHtml(openPassword)}</strong>
+        </div>
+        <div class="protocol-chip">
+          <span>Aktueller Klassen-Code</span>
+          <strong>${escapeHtml(code)}</strong>
         </div>
       </div>
       <div class="instruction-grid">
         <div class="instruction-card">
-          <strong>1. Klasse anlegen</strong>
-          <p>Trage unter <em>Neue Klasse anlegen</em> einen eindeutigen Namen ein, zum Beispiel <em>Klasse 9B Deutsch</em>, und klicke auf <em>Klasse erstellen</em>.</p>
+          <strong>1. Kurs / Klasse anlegen</strong>
+          <p>Trage unter <em>Neue Klasse anlegen</em> einen eindeutigen Namen ein, zum Beispiel <em>Klasse 9B Deutsch</em>, und klicke auf <em>Klasse erstellen</em>. Damit wird sofort ein eigener Klassen-Code für diese Lerngruppe erzeugt.</p>
         </div>
         <div class="instruction-card">
-          <strong>2. Code prüfen</strong>
-          <p>Nach dem Erstellen erscheint oben sofort der neue Klassen-Code. Aktuell ausgewählt ist: <strong>${escapeHtml(code)}</strong>.</p>
+          <strong>2. Klassen-Code prüfen</strong>
+          <p>Nach dem Erstellen erscheint oben sofort der neue Klassen-Code. Aktuell ausgewählt ist: <strong>${escapeHtml(code)}</strong>. Mit <em>Code kopieren</em> gibst du genau diesen Code an die Klasse weiter.</p>
         </div>
         <div class="instruction-card">
-          <strong>3. Code kopieren</strong>
-          <p>Klicke auf <em>Code kopieren</em>. Teile den Code nur mit dieser Lerngruppe. Falls nötig, erstelle mit <em>Code neu erzeugen</em> sofort einen neuen.</p>
+          <strong>3. Passwort festlegen oder prüfen</strong>
+          <p>Das Passwort wird nicht pro Klasse erzeugt, sondern gilt global für die offene Version. Aktuell ist hinterlegt: <strong>${escapeHtml(openPassword)}</strong>. Wenn du es ändern willst, passe auf Render die Umgebungsvariable <code>OPEN_VERSION_PASSWORD</code> an und deploye neu.</p>
         </div>
         <div class="instruction-card">
           <strong>4. Freigaben setzen</strong>
-          <p>Lege fest, ob die offene Version und/oder die SEB-Version aktiv sind. Wähle zusätzlich die aktuelle SEB-Lektion und die Review-Lektion aus.</p>
+          <p>Lege fest, ob die offene Version und/oder die SEB-Version aktiv sind. Wähle zusätzlich die aktuelle SEB-Lektion und die Review-Lektion aus. Erst nach <em>Einstellungen speichern</em> gilt die Auswahl für diese Klasse.</p>
         </div>
         <div class="instruction-card">
-          <strong>5. Schüler-Registrierung offen</strong>
-          <p>Schüler*innen öffnen <em>/open</em>, tragen Klassen-Code, Namen oder Kürzel und das Unterrichtspasswort ein und klicken auf <em>Freischalten</em>.</p>
+          <strong>5. Offene Version starten</strong>
+          <p>Schüler*innen öffnen <em>${escapeHtml(config.openUrl || "/open")}</em>, tragen Klassen-Code, Namen oder Kürzel und das Unterrichtspasswort ein und klicken auf <em>Freischalten</em>. Die Kombination aus Passwort + Klassen-Code bestimmt den Zugang.</p>
         </div>
         <div class="instruction-card">
-          <strong>6. Schüler-Registrierung SEB</strong>
-          <p>Im Safe Exam Browser öffnen Schüler*innen <em>/seb</em>, tragen nur Klassen-Code und Namen ein und klicken auf <em>Starten</em>.</p>
+          <strong>6. SEB-Protokoll vor dem Unterricht</strong>
+          <p>1. Aktive SEB-Lektion wählen. 2. <em>Einstellungen speichern</em>. 3. Safe Exam Browser auf einem Testgerät starten. 4. <em>${escapeHtml(config.sebUrl || "/seb")}</em> öffnen. 5. Mit Klassen-Code und Testnamen anmelden. 6. Prüfen, ob genau die erwartete Lektion erscheint.</p>
         </div>
         <div class="instruction-card">
-          <strong>7. Wichtige Kontrolle vor Unterrichtsbeginn</strong>
-          <p>Teste immer einmal selbst mit einem Demo-Namen, ob Anlegen, Code, Login und die richtige Lektion funktionieren. Danach kannst du den Testeintrag wieder ignorieren.</p>
+          <strong>7. Schüler-Registrierung im SEB</strong>
+          <p>Im Safe Exam Browser öffnen Schüler*innen <em>${escapeHtml(config.sebUrl || "/seb")}</em>, tragen nur Klassen-Code und Namen ein und klicken auf <em>Starten</em>. Ein zusätzliches Passwort gibt es dort nicht.</p>
         </div>
         <div class="instruction-card">
-          <strong>8. Wenn etwas schiefgeht</strong>
-          <p>Stimmt der Code nicht, nutze <em>Code neu erzeugen</em>. Taucht keine Klasse auf, wurde sie noch nicht erstellt. Scheitert der Login, prüfe Code, Schreibweise des Namens und bei <em>/open</em> zusätzlich das Unterrichtspasswort.</p>
+          <strong>8. Minutiöse Endkontrolle</strong>
+          <p>Vor Unterrichtsbeginn immer einmal selbst durchspielen: Klasse angelegt, Code kopiert, Passwort notiert, offene Version getestet, SEB getestet, richtige Lektion sichtbar. Erst dann an die Lerngruppe ausgeben.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>9. Wenn etwas schiefgeht</strong>
+          <p>Stimmt der Code nicht, nutze <em>Code neu erzeugen</em>. Taucht keine Klasse auf, wurde sie noch nicht erstellt. Scheitert der Login in <em>/open</em>, prüfe zusätzlich das Unterrichtspasswort. Öffnet sich <em>/seb</em> nicht, kontrolliere den Safe Exam Browser und ${config.hasSebConfigKeyHash ? "die hinterlegte SEB-Konfiguration." : "die SEB-Umgebung."}</p>
         </div>
       </div>
     </article>
@@ -199,11 +223,12 @@ function render() {
     <main class="teacher-shell">
       <section class="hero panel">
         <div>
-          <div class="eyebrow">Lehrkraft-Dashboard</div>
+          <div class="eyebrow">Lehrer*innen-Dashboard</div>
           <h1>Klassen, Codes, Fortschritt und Peer Review</h1>
           <p>Hier steuerst du Klassen-Codes, das aktive SEB-Arbeitsset, Peer-Review-Zuweisungen und den Lernstand der einzelnen Schüler*innen.</p>
         </div>
         <div class="hero-actions">
+          <a class="button secondary" href="${escapeHtml(config.teacherEntryUrl || "/teacher-entry")}">Lehrer*inneneingang</a>
           <a class="button secondary" href="/auth/teacher/logout">Abmelden</a>
           <a class="button secondary" href="/">Startseite</a>
         </div>

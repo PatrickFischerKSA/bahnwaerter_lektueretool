@@ -1,11 +1,10 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pdfSource, readerModules, theoryResources } from "../public/reader/data.js";
 import { apiRouter } from "./routes/api.mjs";
 import { readerApiRouter } from "./routes/reader-api.mjs";
 import { hasOpenAccess, isSafeExamBrowserRequest, parseCookies } from "./services/access.mjs";
-import { getEntriesForLesson, getLessonSetById, getLessonSetsWithCounts } from "./services/reader-progress.mjs";
+import { getLessonSetById, getLessonSetsWithCounts } from "./services/reader-progress.mjs";
 import { createOrResumeStudent, updateReaderStore } from "./services/reader-store.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,8 +18,6 @@ const STUDENT_COOKIE = "thiel_reader_student";
 const CLASS_COOKIE = "thiel_reader_class";
 const TEACHER_COOKIE = "thiel_teacher_access";
 const SEB_CONFIG_KEY_HASH = process.env.SEB_CONFIG_KEY_HASH || "";
-const modulesById = new Map(readerModules.map((module) => [module.id, module]));
-const entryIndex = new Map(readerModules.flatMap((module) => module.entries.map((entry) => [entry.id, { module, entry }])));
 
 function renderShellPage({ title, body, bodyClass = "" }) {
   return `
@@ -260,20 +257,20 @@ function renderLandingPage() {
           <article class="card">
             <div class="eyebrow">Safe Exam Browser</div>
             <h2>SEB-only</h2>
-            <p>Für Prüfungs- oder Testsettings. Die aktive SEB-Lektion kann pro Klasse im Lehrkraft-Dashboard festgelegt werden.</p>
+            <p>Für Prüfungs- oder Testsettings. Die aktive SEB-Lektion kann pro Klasse im Lehrer*innen-Dashboard festgelegt werden.</p>
             <a class="button" href="/seb">Zur SEB-Version</a>
           </article>
           <article class="card">
-            <div class="eyebrow">Lehrkraft-Dashboard</div>
+            <div class="eyebrow">Lehrer*innen-Dashboard</div>
             <h2>Klassen und Fortschritt</h2>
             <p>Verwalte Klassen-Codes, steuere das aktive SEB-Arbeitsset und überblicke den Lernstand deiner Lerngruppe.</p>
-            <a class="button secondary" href="/teacher">Zum Lehrkraft-Dashboard</a>
+            <a class="button secondary" href="/teacher">Zum Lehrer*innen-Dashboard</a>
           </article>
           <article class="card">
-            <div class="eyebrow">Lehrereingang</div>
+            <div class="eyebrow">Lehrer*inneneingang</div>
             <h2>Alle Aufgaben direkt sehen</h2>
             <p>Geschützter Direkteinstieg für Lehrpersonen mit PDF, Lektionspfad, Passagen und allen Fragen ohne Klassenfreischaltung.</p>
-            <a class="button secondary" href="/teacher-entry">Zum Lehrereingang</a>
+            <a class="button secondary" href="/teacher-entry">Zum Lehrer*inneneingang</a>
           </article>
           <article class="card">
             <div class="eyebrow">Studio</div>
@@ -293,37 +290,25 @@ function renderLandingPage() {
   });
 }
 
-function pageRangeForLesson(lesson) {
-  const pageNumbers = getEntriesForLesson(lesson.id)
-    .map((entry) => Number(entry.pageNumber || 0))
-    .filter(Boolean);
-
-  if (!pageNumbers.length) {
-    return "-";
-  }
-
-  const first = Math.min(...pageNumbers);
-  const last = Math.max(...pageNumbers);
-  return first === last ? `S. ${first}` : `S. ${first}-${last}`;
-}
-
 function renderTeacherEntryPage(lessonId) {
+  const config = teacherRuntimeConfig();
   return `
     <!doctype html>
     <html lang="de">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Lehrereingang · Bahnwärter Thiel</title>
+        <title>Lehrer*inneneingang · Bahnwärter Thiel</title>
         <link rel="stylesheet" href="/reader/styles.css">
       </head>
       <body>
         <script>
           window.THIEL_READER_MODE = "open";
-          window.THIEL_READER_MODE_LABEL = "Lehrervorschau";
+          window.THIEL_READER_MODE_LABEL = "Lehrer*inneneingang";
           window.THIEL_READER_CONFIG = ${JSON.stringify({
             teacherPreview: true,
-            initialLessonId: lessonId || null
+            initialLessonId: lessonId || null,
+            teacherGuide: config
           })};
         </script>
         <script type="module" src="/reader/app.js"></script>
@@ -389,15 +374,15 @@ function renderTeacherLoginPage(errorText = "", redirectTo = "/teacher") {
   const safeRedirect = normalizeTeacherRedirect(redirectTo);
   const isTeacherEntry = safeRedirect === "/teacher-entry";
   return renderShellPage({
-    title: `${isTeacherEntry ? "Lehrereingang" : "Lehrkraft-Dashboard"} · Bahnwärter Thiel`,
+    title: `${isTeacherEntry ? "Lehrer*inneneingang" : "Lehrer*innen-Dashboard"} · Bahnwärter Thiel`,
     body: `
       <main class="page">
         <section class="panel">
-          <div class="eyebrow">${isTeacherEntry ? "Lehrereingang" : "Lehrkraft-Dashboard"}</div>
-          <h1>${isTeacherEntry ? "Lehrereingang entsperren" : "Dashboard entsperren"}</h1>
+          <div class="eyebrow">${isTeacherEntry ? "Lehrer*inneneingang" : "Lehrer*innen-Dashboard"}</div>
+          <h1>${isTeacherEntry ? "Lehrer*inneneingang entsperren" : "Dashboard entsperren"}</h1>
           <p>${isTeacherEntry
-            ? "Der Lehrereingang zeigt alle Lektionen, Passagen, Fragen und das eingebettete PDF direkt, ist aber mit demselben Passwort wie das Lehrkraft-Dashboard geschützt."
-            : "Die Lehrkraftansicht ist separat geschützt und verwaltet Klassen-Codes, SEB-Lektionen und Lernfortschritte."}</p>
+            ? "Der Lehrer*inneneingang zeigt alle Lektionen, Passagen, Fragen und das eingebettete PDF direkt, ist aber mit demselben Passwort wie das Lehrer*innen-Dashboard geschützt."
+            : "Die Lehrer*innenansicht ist separat geschützt und verwaltet Klassen-Codes, SEB-Lektionen und Lernfortschritte."}</p>
           <div class="notice">
             <strong>Wichtig vor dem Unterricht:</strong>
             <br>1. Klasse anlegen.
@@ -411,8 +396,8 @@ function renderTeacherLoginPage(errorText = "", redirectTo = "/teacher") {
             <label for="teacherPassword">Lehrkraft-Passwort</label>
             <input id="teacherPassword" name="password" type="password" autocomplete="current-password" placeholder="Passwort eingeben">
             <div class="row">
-              <button type="submit">${isTeacherEntry ? "Lehrereingang öffnen" : "Dashboard öffnen"}</button>
-              <a class="button secondary" href="${isTeacherEntry ? "/teacher" : "/teacher-entry"}">${isTeacherEntry ? "Zum Dashboard" : "Zum Lehrereingang"}</a>
+              <button type="submit">${isTeacherEntry ? "Lehrer*inneneingang öffnen" : "Dashboard öffnen"}</button>
+              <a class="button secondary" href="${isTeacherEntry ? "/teacher" : "/teacher-entry"}">${isTeacherEntry ? "Zum Dashboard" : "Zum Lehrer*inneneingang"}</a>
               <a class="button secondary" href="/">Zur Übersicht</a>
             </div>
           </form>
@@ -446,16 +431,20 @@ function renderSebBlockedPage() {
 }
 
 function renderTeacherPage() {
+  const config = teacherRuntimeConfig();
   return `
     <!doctype html>
     <html lang="de">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Lehrkraft-Dashboard</title>
+        <title>Lehrer*innen-Dashboard</title>
         <link rel="stylesheet" href="/teacher/styles.css">
       </head>
       <body>
+        <script>
+          window.THIEL_TEACHER_CONFIG = ${JSON.stringify(config)};
+        </script>
         <script type="module" src="/teacher/app.js"></script>
       </body>
     </html>
@@ -517,6 +506,17 @@ function lessonRedirect(mode, lessonId) {
     return `/${mode}`;
   }
   return `/${mode}/lesson/${lessonId}`;
+}
+
+function teacherRuntimeConfig() {
+  return {
+    openPassword: OPEN_PASSWORD,
+    openUrl: "/open",
+    sebUrl: "/seb",
+    teacherUrl: "/teacher",
+    teacherEntryUrl: "/teacher-entry",
+    hasSebConfigKeyHash: Boolean(SEB_CONFIG_KEY_HASH)
+  };
 }
 
 export function createApp() {

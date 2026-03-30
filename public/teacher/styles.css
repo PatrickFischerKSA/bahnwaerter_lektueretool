@@ -193,6 +193,7 @@ textarea {
 .criterion-help,
 .review-settings-box,
 .instruction-card,
+.protocol-chip,
 .code-box,
 .notice-box {
   border: 1px solid var(--border);
@@ -209,6 +210,21 @@ textarea {
 
 .code-box {
   background: rgba(49, 67, 53, 0.06);
+}
+
+.protocol-banner {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 16px;
+}
+
+.protocol-chip {
+  background: rgba(49, 67, 53, 0.06);
+}
+
+.protocol-chip strong {
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
 }
 
 .instruction-grid {

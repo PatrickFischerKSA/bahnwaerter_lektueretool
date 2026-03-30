@@ -5,6 +5,7 @@ const mode = window.THIEL_READER_MODE || "open";
 const modeLabel = window.THIEL_READER_MODE_LABEL || "Offene Version";
 const config = window.THIEL_READER_CONFIG || {};
 const isTeacherPreview = Boolean(config.teacherPreview);
+const teacherGuide = config.teacherGuide || null;
 const app = document.body;
 const previewStorageKey = "thiel_teacher_preview_state";
 
@@ -1220,6 +1221,68 @@ function renderParcoursExportPanel() {
   `;
 }
 
+function renderTeacherProtocolPanel() {
+  if (!isTeacherPreview || !teacherGuide) {
+    return "";
+  }
+
+  const openPassword = teacherGuide.openPassword || "im Server gesetzt";
+  return `
+    <section class="panel teacher-protocol-panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Lehrer*inneneingang</div>
+          <h2>Startprotokoll für Passwort, Klassen-Code und SEB</h2>
+        </div>
+      </div>
+      <div class="protocol-chip-row">
+        <div class="protocol-chip">
+          <span>Offene Version</span>
+          <strong>${escapeHtml(teacherGuide.openUrl || "/open")}</strong>
+        </div>
+        <div class="protocol-chip">
+          <span>SEB-Version</span>
+          <strong>${escapeHtml(teacherGuide.sebUrl || "/seb")}</strong>
+        </div>
+        <div class="protocol-chip">
+          <span>Aktuelles Unterrichtspasswort</span>
+          <strong>${escapeHtml(openPassword)}</strong>
+        </div>
+      </div>
+      <div class="protocol-grid">
+        <article class="protocol-card">
+          <strong>1. Kurs / Klasse anlegen</strong>
+          <p>Im Lehrer*innen-Dashboard eine neue Klasse anlegen. Dabei wird automatisch ein eigener Klassen-Code erzeugt.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>2. Klassen-Code sichern</strong>
+          <p>Den aktuellen Code im Dashboard mit <em>Code kopieren</em> übernehmen. Bei Bedarf mit <em>Code neu erzeugen</em> sofort austauschen.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>3. Passwort prüfen</strong>
+          <p>Für die offene Version gilt das globale Unterrichtspasswort <strong>${escapeHtml(openPassword)}</strong>. Wenn du es ändern willst, passe auf Render <code>OPEN_VERSION_PASSWORD</code> an und deploye neu.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>4. SEB vorbereiten</strong>
+          <p>Im Lehrer*innen-Dashboard die aktive SEB-Lektion wählen, speichern und danach auf einem Testgerät <em>${escapeHtml(teacherGuide.sebUrl || "/seb")}</em> im Safe Exam Browser prüfen.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>5. Offene Version starten</strong>
+          <p>Schüler*innen öffnen <em>${escapeHtml(teacherGuide.openUrl || "/open")}</em> und melden sich mit Klassen-Code, Namen/Kürzel und Passwort an.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>6. SEB-Version starten</strong>
+          <p>Schüler*innen öffnen im Safe Exam Browser <em>${escapeHtml(teacherGuide.sebUrl || "/seb")}</em> und melden sich nur mit Klassen-Code und Namen an.</p>
+        </article>
+        <article class="protocol-card">
+          <strong>7. Endkontrolle</strong>
+          <p>Vor Unterrichtsbeginn immer selbst testen: Klasse angelegt, Code stimmt, Passwort stimmt, offene Version funktioniert, SEB zeigt die richtige Lektion.</p>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function render() {
   if (state.loading) {
     app.innerHTML = '<main class="reader-shell"><section class="panel"><h1>Lädt ...</h1><p>Arbeitsumgebung wird vorbereitet.</p></section></main>';
@@ -1259,6 +1322,8 @@ function render() {
           }
         </div>
       </section>
+
+      ${renderTeacherProtocolPanel()}
 
       ${renderTopStatus()}
 

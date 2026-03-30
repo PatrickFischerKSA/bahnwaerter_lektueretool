@@ -467,6 +467,35 @@ textarea {
   background: rgba(49, 67, 53, 0.09);
 }
 
+.protocol-chip-row,
+.protocol-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.protocol-chip-row {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.protocol-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.protocol-chip,
+.protocol-card {
+  display: grid;
+  gap: 8px;
+  border-radius: 22px;
+  padding: 18px;
+  border: 1px solid rgba(49, 67, 53, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.protocol-chip strong,
+.protocol-card strong {
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
 .structured-section {
   display: grid;
   gap: 12px;
