@@ -445,6 +445,47 @@ textarea {
   border: 1px solid rgba(49, 67, 53, 0.12);
 }
 
+.documentation-status-box {
+  display: grid;
+  gap: 8px;
+  border-radius: 22px;
+  padding: 16px 18px;
+  border: 1px solid rgba(49, 67, 53, 0.12);
+  background: rgba(49, 67, 53, 0.06);
+}
+
+.documentation-status-box.is-warning {
+  background: rgba(180, 92, 57, 0.12);
+  border-color: rgba(180, 92, 57, 0.24);
+}
+
+.documentation-status-box.is-complete {
+  background: rgba(49, 67, 53, 0.09);
+}
+
+.structured-section {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(49, 67, 53, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.field-prompt {
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .feedback-box ul {
   margin: 8px 0 0;
   padding-left: 18px;

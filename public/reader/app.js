@@ -299,12 +299,67 @@ function currentTheory() {
 }
 
 function noteForEntry(entryId) {
-  return state.notes[entryId] || {
+  const raw = state.notes[entryId] || {};
+  return {
     observation: "",
     evidence: "",
     interpretation: "",
     theory: "",
-    revision: ""
+    revision: "",
+    focusAnswers: [],
+    theoryResponses: {},
+    ...raw
+  };
+}
+
+function focusAnswersFor(entry = currentEntry()) {
+  const note = noteForEntry(entry.id);
+  return entry.prompts.map((_, index) => note.focusAnswers?.[index] || "");
+}
+
+function theoryResponseFor(entry = currentEntry(), theory = currentTheory()) {
+  const note = noteForEntry(entry.id);
+  const stored = note.theoryResponses?.[theory.id] || {};
+  const transferPrompts = transferPromptsFor(entry, theory);
+
+  return {
+    guidingAnswers: theory.questions.map((_, index) => stored.guidingAnswers?.[index] || ""),
+    transferAnswers: transferPrompts.map((_, index) => stored.transferAnswers?.[index] || "")
+  };
+}
+
+function trimmed(value) {
+  return String(value || "").trim();
+}
+
+function documentationStatusForEntry(entry = currentEntry(), theory = currentTheory()) {
+  const note = noteForEntry(entry.id);
+  const focusAnswers = focusAnswersFor(entry);
+  const theoryResponses = theoryResponseFor(entry, theory);
+  const checks = [
+    { label: "Beobachtung", complete: Boolean(trimmed(note.observation)) },
+    { label: "Textanker / Wortlaut", complete: Boolean(trimmed(note.evidence)) },
+    { label: "Deutung", complete: Boolean(trimmed(note.interpretation)) },
+    { label: "Theoriebezug", complete: Boolean(trimmed(note.theory)) },
+    { label: "Revision / nächster Schritt", complete: Boolean(trimmed(note.revision)) },
+    ...entry.prompts.map((prompt, index) => ({
+      label: `Fokusfrage ${index + 1}: ${prompt}`,
+      complete: Boolean(trimmed(focusAnswers[index]))
+    })),
+    ...theory.questions.map((question, index) => ({
+      label: `Leitfrage ${index + 1}: ${question}`,
+      complete: Boolean(trimmed(theoryResponses.guidingAnswers[index]))
+    })),
+    ...transferPromptsFor(entry, theory).map((prompt, index) => ({
+      label: `Transfer ${index + 1}: ${prompt}`,
+      complete: Boolean(trimmed(theoryResponses.transferAnswers[index]))
+    }))
+  ];
+
+  return {
+    completed: checks.filter((item) => item.complete).length,
+    total: checks.length,
+    missing: checks.filter((item) => !item.complete).map((item) => item.label)
   };
 }
 
@@ -496,6 +551,10 @@ function renderFocusQuestions(entry) {
 function renderNotebook(entry) {
   const note = noteForEntry(entry.id);
   const feedback = feedbackFor(note, currentModule(), entry);
+  const theory = currentTheory();
+  const focusAnswers = focusAnswersFor(entry);
+  const theoryResponses = theoryResponseFor(entry, theory);
+  const documentation = documentationStatusForEntry(entry, theory);
 
   return `
     <section class="panel notebook">
@@ -505,6 +564,14 @@ function renderNotebook(entry) {
           <h2>${escapeHtml(entry.title)}</h2>
         </div>
         <button class="button secondary" data-action="export-notes">Markdown exportieren</button>
+      </div>
+
+      <div class="documentation-status-box ${documentation.missing.length ? "is-warning" : "is-complete"}">
+        <strong data-doc-summary="entry">${escapeHtml(`Dokumentationsstand: ${documentation.completed}/${documentation.total}`)}</strong>
+        <p data-doc-missing="entry">${documentation.missing.length
+          ? escapeHtml(`Noch offen: ${documentation.missing.join(" · ")}`)
+          : "Alle Fokusfragen, Leitfragen und Transferfragen sind schriftlich dokumentiert."
+        }</p>
       </div>
 
       <form id="note-form" class="note-grid">
@@ -528,6 +595,48 @@ function renderNotebook(entry) {
           Revision / nächster Schritt
           <textarea name="revision" placeholder="Was würdest du nach Feedback oder erneuter Lektüre noch schärfen?">${escapeHtml(note.revision)}</textarea>
         </label>
+
+        <section class="structured-section">
+          <div class="section-head">
+            <strong>Fokusfragen schriftlich beantworten</strong>
+            <span class="status-badge" data-doc-count="focus">${escapeHtml(`${focusAnswers.filter((value) => trimmed(value)).length}/${entry.prompts.length}`)}</span>
+          </div>
+          ${entry.prompts.map((prompt, index) => `
+            <label>
+              ${escapeHtml(`Fokusfrage ${index + 1}`)}
+              <span class="field-prompt">${escapeHtml(prompt)}</span>
+              <textarea data-note-array="focusAnswers" data-index="${index}" placeholder="Formuliere hier eine knappe, textnahe Antwort.">${escapeHtml(focusAnswers[index])}</textarea>
+            </label>
+          `).join("")}
+        </section>
+
+        <section class="structured-section">
+          <div class="section-head">
+            <strong>${escapeHtml(`Leitfragen zu ${theory.shortTitle}`)}</strong>
+            <span class="status-badge" data-doc-count="guiding">${escapeHtml(`${theoryResponses.guidingAnswers.filter((value) => trimmed(value)).length}/${theory.questions.length}`)}</span>
+          </div>
+          ${theory.questions.map((question, index) => `
+            <label>
+              ${escapeHtml(`Leitfrage ${index + 1}`)}
+              <span class="field-prompt">${escapeHtml(question)}</span>
+              <textarea data-note-theory-section="guidingAnswers" data-index="${index}" placeholder="Halte deine Antwort zur Leitfrage schriftlich fest.">${escapeHtml(theoryResponses.guidingAnswers[index])}</textarea>
+            </label>
+          `).join("")}
+        </section>
+
+        <section class="structured-section">
+          <div class="section-head">
+            <strong>Transfer zur Passage schriftlich festhalten</strong>
+            <span class="status-badge" data-doc-count="transfer">${escapeHtml(`${theoryResponses.transferAnswers.filter((value) => trimmed(value)).length}/${transferPromptsFor(entry, theory).length}`)}</span>
+          </div>
+          ${transferPromptsFor(entry, theory).map((prompt, index) => `
+            <label>
+              ${escapeHtml(`Transfer ${index + 1}`)}
+              <span class="field-prompt">${escapeHtml(prompt)}</span>
+              <textarea data-note-theory-section="transferAnswers" data-index="${index}" placeholder="Übertrage die Theorie hier ausdrücklich auf die aktuelle Passage.">${escapeHtml(theoryResponses.transferAnswers[index])}</textarea>
+            </label>
+          `).join("")}
+        </section>
       </form>
 
       ${mode === "seb" ? "" : `
@@ -1113,6 +1222,84 @@ function updateNoteField(field, value) {
   state.saveStatus = "idle";
 }
 
+function updateNoteArrayField(field, index, value) {
+  const entry = currentEntry();
+  const note = noteForEntry(entry.id);
+  const nextValues = Array.isArray(note[field]) ? [...note[field]] : [];
+  nextValues[index] = value;
+  state.notes[entry.id] = {
+    ...note,
+    [field]: nextValues
+  };
+  state.saveStatus = "idle";
+}
+
+function updateTheoryAnswer(section, index, value) {
+  const entry = currentEntry();
+  const theory = currentTheory();
+  const note = noteForEntry(entry.id);
+  const stored = note.theoryResponses?.[theory.id] || {};
+  const nextSection = Array.isArray(stored[section]) ? [...stored[section]] : [];
+  nextSection[index] = value;
+
+  state.notes[entry.id] = {
+    ...note,
+    theoryResponses: {
+      ...(note.theoryResponses || {}),
+      [theory.id]: {
+        ...stored,
+        [section]: nextSection
+      }
+    }
+  };
+  state.saveStatus = "idle";
+}
+
+function updateLiveDocumentation() {
+  const entry = currentEntry();
+  const theory = currentTheory();
+  if (!entry || !theory) {
+    return;
+  }
+
+  const focusAnswers = focusAnswersFor(entry);
+  const theoryResponses = theoryResponseFor(entry, theory);
+  const documentation = documentationStatusForEntry(entry, theory);
+  const summary = document.querySelector('[data-doc-summary="entry"]');
+  const missing = document.querySelector('[data-doc-missing="entry"]');
+  const focusCount = document.querySelector('[data-doc-count="focus"]');
+  const guidingCount = document.querySelector('[data-doc-count="guiding"]');
+  const transferCount = document.querySelector('[data-doc-count="transfer"]');
+  const entryBox = summary?.closest(".documentation-status-box");
+
+  if (summary) {
+    summary.textContent = `Dokumentationsstand: ${documentation.completed}/${documentation.total}`;
+  }
+
+  if (missing) {
+    missing.textContent = documentation.missing.length
+      ? `Noch offen: ${documentation.missing.join(" · ")}`
+      : "Alle Fokusfragen, Leitfragen und Transferfragen sind schriftlich dokumentiert.";
+  }
+
+  if (entryBox) {
+    entryBox.classList.toggle("is-warning", Boolean(documentation.missing.length));
+    entryBox.classList.toggle("is-complete", !documentation.missing.length);
+  }
+
+  if (focusCount) {
+    focusCount.textContent = `${focusAnswers.filter((value) => trimmed(value)).length}/${entry.prompts.length}`;
+  }
+
+  if (guidingCount) {
+    guidingCount.textContent = `${theoryResponses.guidingAnswers.filter((value) => trimmed(value)).length}/${theory.questions.length}`;
+  }
+
+  if (transferCount) {
+    transferCount.textContent = `${theoryResponses.transferAnswers.filter((value) => trimmed(value)).length}/${transferPromptsFor(entry, theory).length}`;
+  }
+}
+
 function updateReviewField(field, value) {
   const review = currentReviewAssignment();
   if (!review) {
@@ -1193,6 +1380,26 @@ function exportNotes() {
       pageRange: pageRangeForLesson(lesson),
       entries: modulesForLesson(lesson).flatMap((module) => module.entries.map((entry) => {
         const note = noteForEntry(entry.id);
+        const exportTheories = theoryOptionsFor(module, entry);
+        const documentationTheory = exportTheories.find((resource) => resource.id === state.theoryId) || exportTheories[0];
+        const theorySections = exportTheories.map((theory) => {
+          const stored = note.theoryResponses?.[theory.id] || {};
+          const transferPrompts = transferPromptsFor(entry, theory);
+
+          return {
+            title: theory.title,
+            sourceTitle: theory.sourceTitle,
+            guidingQuestions: theory.questions.map((question, index) => ({
+              prompt: question,
+              answer: stored.guidingAnswers?.[index] || ""
+            })),
+            transferQuestions: transferPrompts.map((prompt, index) => ({
+              prompt,
+              answer: stored.transferAnswers?.[index] || ""
+            }))
+          };
+        });
+
         return {
           title: entry.title,
           moduleTitle: module.title,
@@ -1202,6 +1409,12 @@ function exportNotes() {
           prompts: entry.prompts,
           signalWords: entry.signalWords,
           writingFrame: entry.writingFrame,
+          focusAnswers: entry.prompts.map((prompt, index) => ({
+            prompt,
+            answer: note.focusAnswers?.[index] || ""
+          })),
+          theorySections,
+          documentation: documentationTheory ? documentationStatusForEntry(entry, documentationTheory) : null,
           answers: {
             observation: note.observation || "-",
             evidence: note.evidence || "-",
@@ -1300,9 +1513,16 @@ document.addEventListener("click", (event) => {
 document.addEventListener("input", (event) => {
   const noteForm = event.target.closest("#note-form");
   if (noteForm) {
-    updateNoteField(event.target.name, event.target.value);
+    if (event.target.dataset.noteArray) {
+      updateNoteArrayField(event.target.dataset.noteArray, Number(event.target.dataset.index || 0), event.target.value);
+    } else if (event.target.dataset.noteTheorySection) {
+      updateTheoryAnswer(event.target.dataset.noteTheorySection, Number(event.target.dataset.index || 0), event.target.value);
+    } else {
+      updateNoteField(event.target.name, event.target.value);
+    }
     queueSave();
     queueSebFeedback();
+    updateLiveDocumentation();
     return;
   }
 
