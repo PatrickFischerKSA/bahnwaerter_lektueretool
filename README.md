@@ -53,6 +53,7 @@ bahnwaerter_lektueretool/
 │   └── seed.json
 ├── docs/
 │   ├── architecture.md
+│   ├── classroom-codes.md
 │   └── deployment.md
 ├── public/
 │   ├── index.html
@@ -150,6 +151,14 @@ npm test
 - CI über GitHub Actions: [.github/workflows/ci.yml](/Users/patrickfischer/Documents/New project/bahnwaerter_lektueretool/.github/workflows/ci.yml)
 - Render-Blueprint: [render.yaml](/Users/patrickfischer/Documents/New project/bahnwaerter_lektueretool/render.yaml)
 - Deploy-Doku: [docs/deployment.md](/Users/patrickfischer/Documents/New project/bahnwaerter_lektueretool/docs/deployment.md)
+- Klassen-Code- und Registrierungsleitfaden: [docs/classroom-codes.md](/Users/patrickfischer/Documents/New project/bahnwaerter_lektueretool/docs/classroom-codes.md)
+
+## Unterrichtsbetrieb
+
+- Lehrkräfte verwalten Klassen-Codes, Freigaben und SEB-Lektionen über `/teacher`.
+- Schüler*innen registrieren sich in `/open` mit Klassen-Code, Name und Unterrichtspasswort.
+- Schüler*innen registrieren sich in `/seb` mit Klassen-Code und Name im Safe Exam Browser.
+- Der Markdown-Export enthält am Ende des Parcours alle Lektionen, Fragen und eingetragenen Antworten.
 
 ## Neue Lektüren anlegen
 

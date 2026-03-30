@@ -4,7 +4,8 @@ const state = {
   loading: true,
   error: "",
   overview: null,
-  selectedClassId: null
+  selectedClassId: null,
+  notice: ""
 };
 
 function escapeHtml(value) {
@@ -35,6 +36,25 @@ async function request(url, options = {}) {
 
 function currentClassroom() {
   return state.overview?.classes.find((entry) => entry.id === state.selectedClassId) || state.overview?.classes[0] || null;
+}
+
+async function copyText(value, successMessage) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      state.notice = successMessage;
+      state.error = "";
+      render();
+      return;
+    }
+  } catch {
+    // fall through to prompt fallback
+  }
+
+  window.prompt("Bitte kopiere den folgenden Wert manuell:", value);
+  state.notice = "Zwischenablage im Browser nicht direkt verfügbar. Der Code wurde zum manuellen Kopieren angezeigt.";
+  state.error = "";
+  render();
 }
 
 function renderLessonOptions(classroom, key) {
@@ -105,6 +125,54 @@ function renderLessonLinks() {
   `).join("");
 }
 
+function renderTeacherGuide(classroom) {
+  const code = classroom?.code || "noch kein Code";
+  return `
+    <article class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Anleitung</div>
+          <h2>Codes erstellen und Schüler*innen anmelden</h2>
+        </div>
+      </div>
+      <div class="instruction-grid">
+        <div class="instruction-card">
+          <strong>1. Klasse anlegen</strong>
+          <p>Trage unter <em>Neue Klasse anlegen</em> einen eindeutigen Namen ein, zum Beispiel <em>Klasse 9B Deutsch</em>, und klicke auf <em>Klasse erstellen</em>.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>2. Code prüfen</strong>
+          <p>Nach dem Erstellen erscheint oben sofort der neue Klassen-Code. Aktuell ausgewählt ist: <strong>${escapeHtml(code)}</strong>.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>3. Code kopieren</strong>
+          <p>Klicke auf <em>Code kopieren</em>. Teile den Code nur mit dieser Lerngruppe. Falls nötig, erstelle mit <em>Code neu erzeugen</em> sofort einen neuen.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>4. Freigaben setzen</strong>
+          <p>Lege fest, ob die offene Version und/oder die SEB-Version aktiv sind. Wähle zusätzlich die aktuelle SEB-Lektion und die Review-Lektion aus.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>5. Schüler-Registrierung offen</strong>
+          <p>Schüler*innen öffnen <em>/open</em>, tragen Klassen-Code, Namen oder Kürzel und das Unterrichtspasswort ein und klicken auf <em>Freischalten</em>.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>6. Schüler-Registrierung SEB</strong>
+          <p>Im Safe Exam Browser öffnen Schüler*innen <em>/seb</em>, tragen nur Klassen-Code und Namen ein und klicken auf <em>Starten</em>.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>7. Wichtige Kontrolle vor Unterrichtsbeginn</strong>
+          <p>Teste immer einmal selbst mit einem Demo-Namen, ob Anlegen, Code, Login und die richtige Lektion funktionieren. Danach kannst du den Testeintrag wieder ignorieren.</p>
+        </div>
+        <div class="instruction-card">
+          <strong>8. Wenn etwas schiefgeht</strong>
+          <p>Stimmt der Code nicht, nutze <em>Code neu erzeugen</em>. Taucht keine Klasse auf, wurde sie noch nicht erstellt. Scheitert der Login, prüfe Code, Schreibweise des Namens und bei <em>/open</em> zusätzlich das Unterrichtspasswort.</p>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function renderCriteriaHelp() {
   return state.overview.reviewCriteria.map((criterion) => `
     <div class="criterion-help">
@@ -156,6 +224,16 @@ function render() {
           ${classroom ? `
             <form id="class-settings-form" class="form-grid">
               <input type="hidden" name="classId" value="${classroom.id}">
+              <div class="code-box">
+                <div>
+                  <div class="eyebrow">Aktueller Klassen-Code</div>
+                  <h3>${escapeHtml(classroom.code)}</h3>
+                </div>
+                <div class="row">
+                  <button type="button" class="button secondary" data-action="copy-code" data-code="${escapeHtml(classroom.code)}">Code kopieren</button>
+                  <button type="button" class="button secondary" data-action="regenerate-code" data-class-id="${classroom.id}">Code neu erzeugen</button>
+                </div>
+              </div>
               <label>
                 Klassenname
                 <input type="text" name="name" value="${escapeHtml(classroom.name)}">
@@ -202,10 +280,11 @@ function render() {
               </div>
               <div class="row">
                 <button type="submit">Einstellungen speichern</button>
-                <button type="button" class="button secondary" data-action="regenerate-code" data-class-id="${classroom.id}">Code neu erzeugen</button>
               </div>
             </form>
           ` : ""}
+          ${state.notice ? `<div class="notice-box success top-gap">${escapeHtml(state.notice)}</div>` : ""}
+          ${state.error ? `<div class="notice-box error top-gap">${escapeHtml(state.error)}</div>` : ""}
           <form id="create-class-form" class="form-grid top-gap">
             <label>
               Neue Klasse anlegen
@@ -230,6 +309,8 @@ function render() {
           </div>
         </article>
       </section>
+
+      ${renderTeacherGuide(classroom)}
 
       <section class="panel">
         <div class="panel-head">
@@ -273,7 +354,12 @@ document.addEventListener("click", async (event) => {
 
   if (action === "select-class") {
     state.selectedClassId = target.dataset.classId;
+    state.notice = "";
     render();
+  }
+
+  if (action === "copy-code") {
+    await copyText(target.dataset.code, `Klassen-Code ${target.dataset.code} wurde in die Zwischenablage kopiert.`);
   }
 
   if (action === "regenerate-code") {
@@ -281,9 +367,12 @@ document.addEventListener("click", async (event) => {
       state.overview = await request(`/reader-api/teacher/classes/${target.dataset.classId}/regenerate`, {
         method: "POST"
       });
+      state.notice = `Für die gewählte Klasse wurde ein neuer Code erzeugt: ${currentClassroom()?.code || ""}`;
+      state.error = "";
       render();
     } catch (error) {
       state.error = error.message;
+      state.notice = "";
       render();
     }
   }
@@ -302,10 +391,13 @@ document.addEventListener("submit", async (event) => {
         })
       });
       state.selectedClassId = state.overview.classes.at(-1)?.id || state.selectedClassId;
+      state.notice = `Klasse erstellt. Neuer Klassen-Code: ${currentClassroom()?.code || ""}`;
+      state.error = "";
       event.target.reset();
       render();
     } catch (error) {
       state.error = error.message;
+      state.notice = "";
       render();
     }
   }
@@ -329,9 +421,12 @@ document.addEventListener("submit", async (event) => {
           peerReviewInstructions: formData.get("peerReviewInstructions")
         })
       });
+      state.notice = "Klasseneinstellungen wurden gespeichert.";
+      state.error = "";
       render();
     } catch (error) {
       state.error = error.message;
+      state.notice = "";
       render();
     }
   }

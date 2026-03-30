@@ -227,6 +227,13 @@ function renderStudentAccessPage({ mode, lessonId, errorText = "" }) {
               ? "Diese Version ist für offene Unterrichtssituationen gedacht und wird über Unterrichtspasswort, Klassen-Code und Namen freigeschaltet."
               : "Diese Version läuft nur im Safe Exam Browser. Für die Zuordnung zur Klasse gibst du nur Klassen-Code und Namen an."}
           </p>
+          <div class="notice">
+            <strong>So funktioniert die Anmeldung:</strong>
+            <br>1. Klassen-Code exakt eingeben.
+            <br>2. Deinen Namen oder ein eindeutiges Kürzel eintragen.
+            ${isOpen ? "<br>3. Das Unterrichtspasswort eingeben." : ""}
+            <br>${isOpen ? "4." : "3."} Auf ${isOpen ? "Freischalten" : "Starten"} klicken und dann direkt in der zugewiesenen Lektion arbeiten.
+          </div>
           ${lesson ? `<div class="notice"><strong>Vorgewählte Lektion:</strong> ${lesson.title}<br>${lesson.sebPrompt}</div>` : ""}
           ${errorText ? `<div class="notice"><strong>Hinweis:</strong> ${errorText}</div>` : ""}
           <form method="post" action="${formAction}" class="form-grid">
@@ -259,6 +266,13 @@ function renderTeacherLoginPage(errorText = "") {
           <div class="eyebrow">Lehrkraft-Dashboard</div>
           <h1>Dashboard entsperren</h1>
           <p>Die Lehrkraftansicht ist separat geschützt und verwaltet Klassen-Codes, SEB-Lektionen und Lernfortschritte.</p>
+          <div class="notice">
+            <strong>Wichtig vor dem Unterricht:</strong>
+            <br>1. Klasse anlegen.
+            <br>2. Klassen-Code prüfen und kopieren.
+            <br>3. Offene Version oder SEB-Version passend freischalten.
+            <br>4. Einmal selbst mit Testname den Login durchspielen.
+          </div>
           ${errorText ? `<div class="notice"><strong>Hinweis:</strong> ${errorText}</div>` : ""}
           <form method="post" action="/auth/teacher" class="form-grid">
             <label for="teacherPassword">Lehrkraft-Passwort</label>

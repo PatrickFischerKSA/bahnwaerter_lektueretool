@@ -191,7 +191,10 @@ textarea {
 .student-card,
 .lesson-link-card,
 .criterion-help,
-.review-settings-box {
+.review-settings-box,
+.instruction-card,
+.code-box,
+.notice-box {
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 18px;
@@ -202,6 +205,29 @@ textarea {
 
 .review-settings-box {
   background: rgba(49, 67, 53, 0.05);
+}
+
+.code-box {
+  background: rgba(49, 67, 53, 0.06);
+}
+
+.instruction-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.instruction-card strong,
+.code-box h3 {
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.notice-box.success {
+  background: rgba(49, 67, 53, 0.08);
+}
+
+.notice-box.error {
+  background: rgba(180, 92, 57, 0.12);
 }
 
 .student-head {

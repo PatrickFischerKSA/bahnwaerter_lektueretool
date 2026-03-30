@@ -1,4 +1,5 @@
 import { pdfSource, readerModules, starterPrompt, theoryResources, lessonSets } from "./data.js";
+import { buildParcoursMarkdown } from "./export.js";
 
 const mode = window.THIEL_READER_MODE || "open";
 const modeLabel = window.THIEL_READER_MODE_LABEL || "Offene Version";
@@ -321,6 +322,28 @@ function progressForCurrentLesson() {
   return state.progress?.lessonProgress?.find((entry) => entry.id === lesson.id) || null;
 }
 
+function pageRangeForLesson(lesson = currentLesson()) {
+  const pageNumbers = modulesForLesson(lesson)
+    .flatMap((module) => module.entries.map((entry) => Number(entry.pageNumber || 0)))
+    .filter(Boolean);
+
+  if (!pageNumbers.length) {
+    return "";
+  }
+
+  const first = Math.min(...pageNumbers);
+  const last = Math.max(...pageNumbers);
+  return first === last ? `S. ${first}` : `S. ${first}-${last}`;
+}
+
+function isParcoursComplete() {
+  return Boolean(
+    state.progress &&
+    state.progress.totalEntries > 0 &&
+    state.progress.completedEntries >= state.progress.totalEntries
+  );
+}
+
 function currentReviewAssignment() {
   return state.peerReview?.assignments?.find((assignment) => assignment.id === state.selectedReviewId) || state.peerReview?.assignments?.[0] || null;
 }
@@ -412,10 +435,11 @@ function renderSidebar() {
 function renderLessonRail() {
   return availableLessons().map((lesson) => {
     const progress = state.progress?.lessonProgress?.find((entry) => entry.id === lesson.id);
+    const entryCount = modulesForLesson(lesson).reduce((sum, module) => sum + module.entries.length, 0);
     return `
       <button class="lesson-pill ${lesson.id === state.lessonId ? "is-active" : ""}" data-action="select-lesson" data-lesson-id="${lesson.id}" ${mode === "seb" || config.forcedLessonId ? "disabled" : ""}>
         <span>${escapeHtml(lesson.title)}</span>
-        <small>${escapeHtml(progress ? `${progress.completedEntries}/${progress.totalEntries}` : `${lesson.moduleIds.length} Module`)}</small>
+        <small>${escapeHtml(progress ? `${progress.completedEntries}/${progress.totalEntries} Passagen` : `${entryCount} Passagen · ${pageRangeForLesson(lesson)}`)}</small>
       </button>
     `;
   }).join("");
@@ -943,6 +967,28 @@ function renderProgressBox() {
   `;
 }
 
+function renderParcoursExportPanel() {
+  const complete = isParcoursComplete();
+  const answered = state.progress?.completedEntries || 0;
+  const total = state.progress?.totalEntries || 0;
+
+  return `
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Parcours-Export</div>
+          <h2>${complete ? "Parcours abgeschlossen" : "Parcours dokumentieren"}</h2>
+        </div>
+        <button class="button secondary" data-action="export-notes">${complete ? "Fragen und Antworten exportieren" : "Zwischenstand exportieren"}</button>
+      </div>
+      <div class="notice-box">
+        <strong>${complete ? "Alle Stationen sind bearbeitet." : "Export bereits jetzt möglich."}</strong>
+        <p>${escapeHtml(`Der Export enthält alle Lektionen, Fokusfragen und die dazu eingetragenen Antworten. Aktuell sind ${answered} von ${total} Passagen bearbeitet.`)}</p>
+      </div>
+    </section>
+  `;
+}
+
 function render() {
   if (state.loading) {
     app.innerHTML = '<main class="reader-shell"><section class="panel"><h1>Lädt ...</h1><p>Arbeitsumgebung wird vorbereitet.</p></section></main>';
@@ -1051,6 +1097,7 @@ function render() {
           ${renderNotebook(entry)}
           ${renderSebFeedbackPanel()}
           ${renderPeerReviewPanel()}
+          ${renderParcoursExportPanel()}
         </section>
       </section>
     </main>
@@ -1132,47 +1179,46 @@ async function submitReview(status) {
 }
 
 function exportNotes() {
-  const lines = [
-    "# Bahnwärter Thiel Lesetool",
-    "",
-    `Modus: ${modeLabel}`,
-    `Klasse: ${state.classroom?.name || "-"}`,
-    `Bearbeitung: ${state.student?.displayName || "-"}`,
-    `Lektion: ${currentLesson().title}`,
-    ""
-  ];
-
-  for (const lesson of availableLessons()) {
-    lines.push(`## ${lesson.title}`);
-    lines.push(lesson.summary);
-    lines.push("");
-
-    for (const module of modulesForLesson(lesson)) {
-      lines.push(`### ${module.title}`);
-      lines.push(module.task);
-      lines.push("");
-
-      for (const entry of module.entries) {
+  const markdown = buildParcoursMarkdown({
+    modeLabel,
+    classroomName: state.classroom?.name || "-",
+    studentName: state.student?.displayName || "-",
+    complete: isParcoursComplete(),
+    completedEntries: state.progress?.completedEntries || 0,
+    totalEntries: state.progress?.totalEntries || 0,
+    lessons: availableLessons().map((lesson) => ({
+      title: lesson.title,
+      summary: lesson.summary,
+      reviewFocus: lesson.reviewFocus,
+      pageRange: pageRangeForLesson(lesson),
+      entries: modulesForLesson(lesson).flatMap((module) => module.entries.map((entry) => {
         const note = noteForEntry(entry.id);
-        lines.push(`#### ${entry.title}`);
-        lines.push(`Seite: ${entry.pageHint}`);
-        lines.push(`Passage: ${entry.passageLabel}`);
-        lines.push(`Kontext: ${entry.context}`);
-        lines.push(`Signalwörter: ${note.evidence || entry.signalWords.join(", ")}`);
-        lines.push(`Beobachtung: ${note.observation || "-"}`);
-        lines.push(`Deutung: ${note.interpretation || "-"}`);
-        lines.push(`Theoriebezug: ${note.theory || "-"}`);
-        lines.push(`Revision: ${note.revision || "-"}`);
-        lines.push("");
-      }
-    }
-  }
+        return {
+          title: entry.title,
+          moduleTitle: module.title,
+          pageHint: entry.pageHint,
+          passageLabel: entry.passageLabel,
+          context: entry.context,
+          prompts: entry.prompts,
+          signalWords: entry.signalWords,
+          writingFrame: entry.writingFrame,
+          answers: {
+            observation: note.observation || "-",
+            evidence: note.evidence || "-",
+            interpretation: note.interpretation || "-",
+            theory: note.theory || "-",
+            revision: note.revision || "-"
+          }
+        };
+      }))
+    }))
+  });
 
-  const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `bahnwaerter-thiel-lesetool-${mode}.md`;
+  link.download = `bahnwaerter-thiel-parcours-${mode}.md`;
   link.click();
   URL.revokeObjectURL(url);
 }
